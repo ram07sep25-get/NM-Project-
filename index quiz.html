@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizMaster Forms</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+        body { 
+            box-sizing: border-box; 
+        }
+        .fade-in { 
+            animation: fadeIn 0.3s ease-in; 
+        }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .slide-up { 
+            animation: slideUp 0.4s ease-out; 
+        }
+        @keyframes slideUp { 
+            from { transform: translateY(20px); opacity: 0; } 
+            to { transform: translateY(0); opacity: 1; } 
+        }
+        .loading { 
+            opacity: 0.6; 
+            pointer-events: none; 
+        }
+        .google-form-style {
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        }
+        .question-card {
+            border-left: 4px solid #673ab7;
+            transition: all 0.2s ease;
+        }
+        .question-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        @view-transition { 
+            navigation: auto; 
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="min-h-full bg-gray-50">
+  <div class="container mx-auto px-4 py-8"><!-- Header -->
+   <header class="text-center mb-8">
+    <h1 id="appTitle" class="text-4xl font-bold mb-2 text-gray-800">📚 QuizMaster Forms</h1>
+    <p id="appSubtitle" class="text-lg text-gray-600">Create and share quizzes easily</p>
+   </header><!-- Mode Selection -->
+   <div id="modeSelection" class="max-w-2xl mx-auto mb-8">
+    <div class="google-form-style p-8">
+     <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Choose Your Role</h2>
+     <div class="grid md:grid-cols-2 gap-6"><button onclick="showTeacherMode()" class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg transform hover:scale-105 transition-transform">
+       <div class="text-4xl mb-3">
+        👩‍🏫
+       </div><h3 class="text-xl font-semibold mb-2" id="teacherButtonText">Create Quiz</h3><p class="text-purple-100">Design quizzes and view responses</p></button> <button onclick="showStudentMode()" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg transform hover:scale-105 transition-transform">
+       <div class="text-4xl mb-3">
+        🎓
+       </div><h3 class="text-xl font-semibold mb-2" id="studentButtonText">Take Quiz</h3><p class="text-green-100">Enter quiz code and answer questions</p></button>
+     </div>
+    </div>
+   </div><!-- Teacher Mode -->
+   <div id="teacherMode" class="hidden">
+    <div class="max-w-4xl mx-auto mb-6">
+     <div class="google-form-style p-4">
+      <div class="flex flex-wrap gap-4 justify-center"><button onclick="showCreateQuiz()" id="createQuizBtn" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"> ➕ Create New Quiz </button> <button onclick="showQuizList()" id="quizListBtn" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"> 📋 My Quizzes </button> <button onclick="showResponses()" id="responsesBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"> 📊 View Responses </button> <button onclick="showModeSelection()" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"> 🏠 Back to Home </button>
+      </div>
+     </div>
+    </div><!-- Create Quiz Section -->
+    <div id="createQuizSection" class="max-w-4xl mx-auto">
+     <div class="google-form-style p-8 fade-in">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6">Create New Quiz</h2>
+      <form id="quizForm" onsubmit="createQuiz(event)">
+       <div class="mb-6"><label for="quizTitle" class="block text-sm font-medium text-gray-700 mb-2">Quiz Title *</label> <input type="text" id="quizTitle" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter quiz title">
+       </div>
+       <div class="mb-6"><label for="quizDescription" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label> <textarea id="quizDescription" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Brief description of your quiz"></textarea>
+       </div>
+       <div class="mb-6">
+        <div class="flex justify-between items-center mb-4">
+         <h3 class="text-lg font-semibold text-gray-800">Questions</h3><button type="button" onclick="addQuestion()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"> ➕ Add Question </button>
+        </div>
+        <div id="questionsContainer"><!-- Questions will be added here -->
+        </div>
+       </div>
+       <div class="flex gap-4"><button type="submit" id="createQuizSubmit" class="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"> 🚀 Create Quiz </button> <button type="button" onclick="resetQuizForm()" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"> 🔄 Reset </button>
+       </div>
+      </form>
+     </div>
+    </div><!-- Quiz List Section -->
+    <div id="quizListSection" class="hidden max-w-4xl mx-auto">
+     <div class="google-form-style p-8 fade-in">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6">My Quizzes</h2>
+      <div id="quizzesList" class="space-y-4"><!-- Quizzes will be displayed here -->
+      </div>
+     </div>
+    </div><!-- Responses Section -->
+    <div id="responsesSection" class="hidden max-w-6xl mx-auto">
+     <div class="google-form-style p-8 fade-in">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6">Student Responses</h2>
+      <div id="responsesList" class="space-y-4"><!-- Responses will be displayed here -->
+      </div>
+     </div>
+    </div>
+   </div><!-- Student Mode -->
+   <div id="studentMode" class="hidden">
+    <div class="max-w-2xl mx-auto mb-6">
+     <div class="google-form-style p-4">
+      <div class="text-center"><button onclick="showModeSelection()" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"> 🏠 Back to Home </button>
+      </div>
+     </div>
+    </div><!-- Student Info Form -->
+    <div id="studentInfoSection" class="max-w-2xl mx-auto">
+     <div class="google-form-style p-8 fade-in">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6">Student Information</h2>
+      <form id="studentForm" onsubmit="joinQuiz(event)">
+       <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div><label for="studentName" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label> <input type="text" id="studentName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Enter your full name">
+        </div>
+        <div><label for="studentClass" class="block text-sm font-medium text-gray-700 mb-2">Class *</label> <input type="text" id="studentClass" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="e.g., 10th Grade">
+        </div>
+        <div><label for="course" class="block text-sm font-medium text-gray-700 mb-2">Course *</label> <input type="text" id="course" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="e.g., Mathematics">
+        </div>
+        <div><label for="section" class="block text-sm font-medium text-gray-700 mb-2">Section *</label> <input type="text" id="section" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="e.g., A, B, C">
+        </div>
+       </div>
+       <div class="mb-6"><label for="quizCode" class="block text-sm font-medium text-gray-700 mb-2">Quiz Code *</label> <input type="text" id="quizCode" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-center text-lg font-mono" placeholder="Enter 6-digit quiz code" maxlength="6" style="text-transform: uppercase;">
+       </div><button type="submit" id="joinQuizBtn" class="w-full px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"> 🎯 Start Quiz </button>
+      </form>
+     </div>
+    </div><!-- Quiz Taking Section -->
+    <div id="quizTakingSection" class="hidden max-w-4xl mx-auto">
+     <div class="google-form-style p-8 fade-in">
+      <div class="mb-6">
+       <h2 id="currentQuizTitle" class="text-2xl font-semibold text-gray-800 mb-2"></h2>
+       <p id="currentQuizDescription" class="text-gray-600 mb-4"></p>
+       <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+        <p class="text-blue-800"><strong>Instructions:</strong> Answer all questions and click submit when done. You cannot change your answers after submission.</p>
+       </div>
+      </div>
+      <form id="quizAnswersForm" onsubmit="submitQuiz(event)">
+       <div id="quizQuestionsContainer" class="space-y-6 mb-8"><!-- Quiz questions will be displayed here -->
+       </div>
+       <div class="text-center"><button type="submit" id="submitQuizBtn" class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"> ✅ Submit Quiz </button>
+       </div>
+      </form>
+     </div>
+    </div><!-- Success Message -->
+    <div id="successMessage" class="hidden max-w-2xl mx-auto">
+     <div class="google-form-style p-8 text-center fade-in">
+      <div class="text-6xl mb-4">
+       🎉
+      </div>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Quiz Submitted Successfully!</h2>
+      <p class="text-gray-600 mb-6">Your responses have been recorded and sent to your teacher.</p><button onclick="takeAnotherQuiz()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"> 📝 Take Another Quiz </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- Toast Notification -->
+  <div id="toast" class="hidden fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 slide-up"><span id="toastMessage"></span>
+  </div>
+  <script>
+        // Global variables
+        let allData = [];
+        let recordCount = 0;
+        let currentQuiz = null;
+        let studentInfo = null;
+        let questionCounter = 0;
+
+        const defaultConfig = {
+            app_title: "📚 QuizMaster Forms",
+            app_subtitle: "Create and share quizzes easily",
+            teacher_button_text: "Create Quiz",
+            student_button_text: "Take Quiz",
+            background_color: "#f9fafb",
+            surface_color: "#ffffff",
+            text_color: "#1f2937",
+            primary_action_color: "#7c3aed",
+            secondary_action_color: "#059669",
+            font_family: "Inter",
+            font_size: 16
+        };
+
+        // Data SDK Handler
+        const dataHandler = {
+            onDataChanged(data) {
+                allData = data;
+                recordCount = data.length;
+                updateQuizzesList();
+                updateResponsesList();
+            }
+        };
+
+        // Initialize SDKs
+        async function initializeApp() {
+            if (window.dataSdk) {
+                const initResult = await window.dataSdk.init(dataHandler);
+                if (!initResult.isOk) {
+                    console.error("Failed to initialize data SDK");
+                }
+            }
+
+            if (window.elementSdk) {
+                await window.elementSdk.init({
+                    defaultConfig,
+                    render,
+                    mapToCapabilities,
+                    mapToEditPanelValues
+                });
+            }
+
+            // Add first question by default
+            addQuestion();
+        }
+
+        // Element SDK Functions
+        async function render(config) {
+            const appTitle = document.getElementById('appTitle');
+            const appSubtitle = document.getElementById('appSubtitle');
+            const teacherButtonText = document.getElementById('teacherButtonText');
+            const studentButtonText = document.getElementById('studentButtonText');
+
+            if (appTitle) appTitle.textContent = config.app_title || defaultConfig.app_title;
+            if (appSubtitle) appSubtitle.textContent = config.app_subtitle || defaultConfig.app_subtitle;
+            if (teacherButtonText) teacherButtonText.textContent = config.teacher_button_text || defaultConfig.teacher_button_text;
+            if (studentButtonText) studentButtonText.textContent = config.student_button_text || defaultConfig.student_button_text;
+
+            // Apply colors
+            const backgroundColor = config.background_color || defaultConfig.background_color;
+            const surfaceColor = config.surface_color || defaultConfig.surface_color;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+
+            document.body.style.backgroundColor = backgroundColor;
+            
+            const surfaces = document.querySelectorAll('.google-form-style');
+            surfaces.forEach(surface => surface.style.backgroundColor = surfaceColor);
+
+            const textElements = document.querySelectorAll('h1, h2, h3, p, label');
+            textElements.forEach(el => el.style.color = textColor);
+
+            const primaryButtons = document.querySelectorAll('#createQuizSubmit, #joinQuizBtn, #submitQuizBtn');
+            primaryButtons.forEach(btn => btn.style.backgroundColor = primaryColor);
+
+            const secondaryButtons = document.querySelectorAll('button[onclick*="addQuestion"]');
+            secondaryButtons.forEach(btn => btn.style.backgroundColor = secondaryColor);
+
+            // Apply font
+            const customFont = config.font_family || defaultConfig.font_family;
+            const fontSize = config.font_size || defaultConfig.font_size;
+            
+            document.body.style.fontFamily = `${customFont}, Inter, sans-serif`;
+            document.body.style.fontSize = `${fontSize}px`;
+            
+            const headings = document.querySelectorAll('h1, h2, h3');
+            headings.forEach(h => {
+                if (h.tagName === 'H1') h.style.fontSize = `${fontSize * 2.25}px`;
+                if (h.tagName === 'H2') h.style.fontSize = `${fontSize * 1.5}px`;
+                if (h.tagName === 'H3') h.style.fontSize = `${fontSize * 1.25}px`;
+            });
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [
+                    {
+                        get: () => config.background_color || defaultConfig.background_color,
+                        set: (value) => {
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ background_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.surface_color || defaultConfig.surface_color,
+                        set: (value) => {
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ surface_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.text_color || defaultConfig.text_color,
+                        set: (value) => {
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ text_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                        set: (value) => {
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ primary_action_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                        set: (value) => {
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ secondary_action_color: value });
+                            }
+                        }
+                    }
+                ],
+                borderables: [],
+                fontEditable: {
+                    get: () => config.font_family || defaultConfig.font_family,
+                    set: (value) => {
+                        if (window.elementSdk) {
+                            window.elementSdk.setConfig({ font_family: value });
+                        }
+                    }
+                },
+                fontSizeable: {
+                    get: () => config.font_size || defaultConfig.font_size,
+                    set: (value) => {
+                        if (window.elementSdk) {
+                            window.elementSdk.setConfig({ font_size: value });
+                        }
+                    }
+                }
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["app_title", config.app_title || defaultConfig.app_title],
+                ["app_subtitle", config.app_subtitle || defaultConfig.app_subtitle],
+                ["teacher_button_text", config.teacher_button_text || defaultConfig.teacher_button_text],
+                ["student_button_text", config.student_button_text || defaultConfig.student_button_text]
+            ]);
+        }
+
+        // Navigation Functions
+        function showModeSelection() {
+            hideAllSections();
+            document.getElementById('modeSelection').classList.remove('hidden');
+        }
+
+        function showTeacherMode() {
+            hideAllSections();
+            document.getElementById('teacherMode').classList.remove('hidden');
+            showCreateQuiz();
+        }
+
+        function showStudentMode() {
+            hideAllSections();
+            document.getElementById('studentMode').classList.remove('hidden');
+            document.getElementById('studentInfoSection').classList.remove('hidden');
+        }
+
+        function showCreateQuiz() {
+            hideTeacherSections();
+            document.getElementById('createQuizSection').classList.remove('hidden');
+            updateActiveButton('createQuizBtn');
+        }
+
+        function showQuizList() {
+            hideTeacherSections();
+            document.getElementById('quizListSection').classList.remove('hidden');
+            updateActiveButton('quizListBtn');
+            updateQuizzesList();
+        }
+
+        function showResponses() {
+            hideTeacherSections();
+            document.getElementById('responsesSection').classList.remove('hidden');
+            updateActiveButton('responsesBtn');
+            updateResponsesList();
+        }
+
+        function hideAllSections() {
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('teacherMode').classList.add('hidden');
+            document.getElementById('studentMode').classList.add('hidden');
+        }
+
+        function hideTeacherSections() {
+            document.getElementById('createQuizSection').classList.add('hidden');
+            document.getElementById('quizListSection').classList.add('hidden');
+            document.getElementById('responsesSection').classList.add('hidden');
+        }
+
+        function updateActiveButton(activeId) {
+            const buttons = ['createQuizBtn', 'quizListBtn', 'responsesBtn'];
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (id === activeId) {
+                    btn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                    btn.classList.add('bg-purple-600', 'hover:bg-purple-700');
+                } else {
+                    btn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                }
+            });
+        }
+
+        // Question Management
+        function addQuestion() {
+            questionCounter++;
+            const container = document.getElementById('questionsContainer');
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-card google-form-style p-6 mb-4';
+            questionDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-lg font-semibold text-gray-800">Question ${questionCounter}</h4>
+                    <button type="button" onclick="removeQuestion(this)" class="text-red-600 hover:text-red-800 px-3 py-1 rounded">
+                        🗑️ Remove
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
+                    <input type="text" class="question-text w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter your question" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                    <select class="question-type w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" onchange="updateQuestionType(this)">
+                        <option value="multiple-choice">Multiple Choice</option>
+                        <option value="true-false">True/False</option>
+                        <option value="short-answer">Short Answer</option>
+                    </select>
+                </div>
+                <div class="options-container">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Answer Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${questionCounter}" value="A" class="text-purple-600">
+                            <input type="text" class="option-text flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="Option A" required>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${questionCounter}" value="B" class="text-purple-600">
+                            <input type="text" class="option-text flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="Option B" required>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${questionCounter}" value="C" class="text-purple-600">
+                            <input type="text" class="option-text flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="Option C" required>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${questionCounter}" value="D" class="text-purple-600">
+                            <input type="text" class="option-text flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="Option D" required>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Select the correct answer by clicking the radio button</p>
+                </div>
+            `;
+            container.appendChild(questionDiv);
+        }
+
+        function removeQuestion(button) {
+            const questionDiv = button.closest('.question-card');
+            questionDiv.remove();
+            updateQuestionNumbers();
+        }
+
+        function updateQuestionNumbers() {
+            const questions = document.querySelectorAll('.question-card h4');
+            questions.forEach((h4, index) => {
+                h4.textContent = `Question ${index + 1}`;
+            });
+        }
+
+        function updateQuestionType(select) {
+            const container = select.closest('.question-card');
+            const optionsContainer = container.querySelector('.options-container');
+            const type = select.value;
+            
+            if (type === 'true-false') {
+                optionsContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Answer Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${container.querySelector('h4').textContent.split(' ')[1]}" value="True" class="text-purple-600">
+                            <span class="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">True</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="correct_${container.querySelector('h4').textContent.split(' ')[1]}" value="False" class="text-purple-600">
+                            <span class="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">False</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Select the correct answer</p>
+                `;
+            } else if (type === 'short-answer') {
+                optionsContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Expected Answer (Optional)</label>
+                    <input type="text" class="expected-answer w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter expected answer for reference">
+                    <p class="text-sm text-gray-600 mt-2">Students will type their answer in a text box</p>
+                `;
+            }
+        }
+
+        function resetQuizForm() {
+            document.getElementById('quizForm').reset();
+            document.getElementById('questionsContainer').innerHTML = '';
+            questionCounter = 0;
+            addQuestion();
+        }
+
+        // Quiz Creation
+        async function createQuiz(event) {
+            event.preventDefault();
+            
+            if (recordCount >= 999) {
+                showToast("Maximum limit of 999 records reached. Please delete some items first.", "error");
+                return;
+            }
+
+            const submitBtn = document.getElementById('createQuizSubmit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Creating...';
+
+            const title = document.getElementById('quizTitle').value;
+            const description = document.getElementById('quizDescription').value;
+            const questionCards = document.querySelectorAll('.question-card');
+            
+            const questions = Array.from(questionCards).map((card, index) => {
+                const questionText = card.querySelector('.question-text').value;
+                const questionType = card.querySelector('.question-type').value;
+                
+                let questionData = {
+                    id: index + 1,
+                    question: questionText,
+                    type: questionType
+                };
+
+                if (questionType === 'multiple-choice') {
+                    const options = Array.from(card.querySelectorAll('.option-text')).map(input => input.value);
+                    const correctRadio = card.querySelector('input[type="radio"]:checked');
+                    questionData.options = options;
+                    questionData.correct = correctRadio ? correctRadio.value : '';
+                } else if (questionType === 'true-false') {
+                    const correctRadio = card.querySelector('input[type="radio"]:checked');
+                    questionData.options = ['True', 'False'];
+                    questionData.correct = correctRadio ? correctRadio.value : '';
+                } else if (questionType === 'short-answer') {
+                    const expectedAnswer = card.querySelector('.expected-answer');
+                    questionData.expectedAnswer = expectedAnswer ? expectedAnswer.value : '';
+                }
+
+                return questionData;
+            });
+
+            const quizCode = generateQuizCode();
+            
+            const quizData = {
+                id: `quiz_${Date.now()}`,
+                type: 'quiz',
+                quiz_code: quizCode,
+                title: title,
+                description: description,
+                questions: JSON.stringify(questions),
+                created_at: new Date().toISOString()
+            };
+
+            if (window.dataSdk) {
+                const result = await window.dataSdk.create(quizData);
+                if (result.isOk) {
+                    showToast(`🎉 Quiz created! Code: ${quizCode}`, "success");
+                    resetQuizForm();
+                } else {
+                    showToast("❌ Failed to create quiz. Please try again.", "error");
+                }
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 Create Quiz';
+        }
+
+        // Student Quiz Functions
+        async function joinQuiz(event) {
+            event.preventDefault();
+            
+            const joinBtn = document.getElementById('joinQuizBtn');
+            joinBtn.disabled = true;
+            joinBtn.textContent = '⏳ Loading...';
+
+            const quizCode = document.getElementById('quizCode').value.toUpperCase();
+            const quiz = allData.find(item => item.type === 'quiz' && item.quiz_code === quizCode);
+            
+            if (!quiz) {
+                showToast("❌ Invalid quiz code. Please check and try again.", "error");
+                joinBtn.disabled = false;
+                joinBtn.textContent = '🎯 Start Quiz';
+                return;
+            }
+
+            studentInfo = {
+                name: document.getElementById('studentName').value,
+                class: document.getElementById('studentClass').value,
+                course: document.getElementById('course').value,
+                section: document.getElementById('section').value
+            };
+
+            currentQuiz = quiz;
+            displayQuiz(quiz);
+            
+            joinBtn.disabled = false;
+            joinBtn.textContent = '🎯 Start Quiz';
+        }
+
+        function displayQuiz(quiz) {
+            document.getElementById('studentInfoSection').classList.add('hidden');
+            document.getElementById('quizTakingSection').classList.remove('hidden');
+            
+            document.getElementById('currentQuizTitle').textContent = quiz.title;
+            document.getElementById('currentQuizDescription').textContent = quiz.description || 'No description provided.';
+            
+            const questions = JSON.parse(quiz.questions);
+            const container = document.getElementById('quizQuestionsContainer');
+            container.innerHTML = '';
+            
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-card google-form-style p-6';
+                
+                let optionsHtml = '';
+                if (q.type === 'multiple-choice') {
+                    optionsHtml = q.options.map((option, optIndex) => `
+                        <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors">
+                            <input type="radio" name="question_${q.id}" value="${String.fromCharCode(65 + optIndex)}" class="text-green-600" required>
+                            <span>${String.fromCharCode(65 + optIndex)}. ${option}</span>
+                        </label>
+                    `).join('');
+                } else if (q.type === 'true-false') {
+                    optionsHtml = `
+                        <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors">
+                            <input type="radio" name="question_${q.id}" value="True" class="text-green-600" required>
+                            <span>True</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors">
+                            <input type="radio" name="question_${q.id}" value="False" class="text-green-600" required>
+                            <span>False</span>
+                        </label>
+                    `;
+                } else if (q.type === 'short-answer') {
+                    optionsHtml = `
+                        <textarea name="question_${q.id}" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Type your answer here..." required></textarea>
+                    `;
+                }
+
+                questionDiv.innerHTML = `
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">${index + 1}. ${q.question}</h4>
+                    <div class="space-y-2">
+                        ${optionsHtml}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        async function submitQuiz(event) {
+            event.preventDefault();
+            
+            if (recordCount >= 999) {
+                showToast("❌ Maximum limit reached. Cannot submit response.", "error");
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitQuizBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Submitting...';
+
+            const formData = new FormData(event.target);
+            const answers = {};
+            
+            for (let [key, value] of formData.entries()) {
+                answers[key] = value;
+            }
+
+            const responseData = {
+                id: `response_${Date.now()}`,
+                type: 'response',
+                quiz_code: currentQuiz.quiz_code,
+                student_name: studentInfo.name,
+                student_class: studentInfo.class,
+                course: studentInfo.course,
+                section: studentInfo.section,
+                answers: JSON.stringify(answers),
+                submitted_at: new Date().toISOString()
+            };
+
+            if (window.dataSdk) {
+                const result = await window.dataSdk.create(responseData);
+                if (result.isOk) {
+                    document.getElementById('quizTakingSection').classList.add('hidden');
+                    document.getElementById('successMessage').classList.remove('hidden');
+                } else {
+                    showToast("❌ Failed to submit quiz. Please try again.", "error");
+                }
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Submit Quiz';
+        }
+
+        function takeAnotherQuiz() {
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('studentInfoSection').classList.remove('hidden');
+            document.getElementById('studentForm').reset();
+            currentQuiz = null;
+            studentInfo = null;
+        }
+
+        // Update Lists
+        function updateQuizzesList() {
+            const container = document.getElementById('quizzesList');
+            const quizzes = allData.filter(item => item.type === 'quiz');
+            
+            if (quizzes.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">📝 No quizzes created yet. Create your first quiz!</div>';
+                return;
+            }
+            
+            container.innerHTML = quizzes.map(quiz => {
+                const questions = JSON.parse(quiz.questions);
+                const responseCount = allData.filter(r => r.type === 'response' && r.quiz_code === quiz.quiz_code).length;
+                
+                return `
+                    <div class="google-form-style p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2">${quiz.title}</h3>
+                                <p class="text-gray-600 mb-3">${quiz.description || 'No description'}</p>
+                                <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                                    <span>📅 Created: ${new Date(quiz.created_at).toLocaleDateString()}</span>
+                                    <span>❓ ${questions.length} questions</span>
+                                    <span>👥 ${responseCount} responses</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-mono text-lg font-bold">
+                                    ${quiz.quiz_code}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Quiz Code</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateResponsesList() {
+            const container = document.getElementById('responsesList');
+            const responses = allData.filter(item => item.type === 'response');
+            
+            if (responses.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">📊 No responses yet. Share your quiz codes with students!</div>';
+                return;
+            }
+            
+            // Group responses by quiz
+            const responsesByQuiz = {};
+            responses.forEach(response => {
+                if (!responsesByQuiz[response.quiz_code]) {
+                    responsesByQuiz[response.quiz_code] = [];
+                }
+                responsesByQuiz[response.quiz_code].push(response);
+            });
+            
+            container.innerHTML = Object.entries(responsesByQuiz).map(([quizCode, quizResponses]) => {
+                const quiz = allData.find(q => q.type === 'quiz' && q.quiz_code === quizCode);
+                const quizTitle = quiz ? quiz.title : 'Unknown Quiz';
+                
+                return `
+                    <div class="google-form-style p-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">📋 ${quizTitle} (${quizCode})</h3>
+                        <div class="space-y-3">
+                            ${quizResponses.map(response => `
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-800">👤 ${response.student_name}</h4>
+                                            <p class="text-sm text-gray-600">Class: ${response.student_class}</p>
+                                            <p class="text-sm text-gray-600">Course: ${response.course} | Section: ${response.section}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm text-gray-600">📅 ${new Date(response.submitted_at).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Utility Functions
+        function generateQuizCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 slide-up ${
+                type === 'success' ? 'bg-green-600' : 
+                type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            }`;
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 4000);
+        }
+
+        // Auto-format quiz code input
+        document.getElementById('quizCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        // Initialize app
+        initializeApp();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99360028f56de8e0',t:'MTc2MTI3MjQ4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
